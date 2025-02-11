@@ -112,9 +112,6 @@ with tabs[0]:
 
     # Explicação Biológica com Melhor Formatação
     
-
-
-
 with tabs[1]:
     st.write("#### Pontos de equilíbrio do modelo")
     explanations = [
