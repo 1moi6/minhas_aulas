@@ -123,11 +123,11 @@ with tabs[1]:
          symbolic_equilibria[0]),
 
         ("2. Sobrevivência Apenas da Espécie 1", 
-         "A população da espécie 1 atinge sua capacidade suporte \( K \), enquanto a espécie 2 é extinta. Isso pode ocorrer se a segunda espécie for muito dependente da primeira e não conseguir se sustentar sozinha.",
+         "A população da espécie 1 atinge sua capacidade suporte, enquanto a espécie 2 é extinta. Isso pode ocorrer se a segunda espécie for muito dependente da primeira e não conseguir se sustentar sozinha.",
          symbolic_equilibria[1]),
 
         ("3. Sobrevivência Apenas da Espécie 2", 
-         "A população da espécie 2 atinge sua capacidade suporte \( M \), enquanto a espécie 1 é extinta. Esse caso é análogo ao anterior, mas favorece a segunda espécie.",
+         "A população da espécie 2 atinge sua capacidade suporte, enquanto a espécie 1 é extinta. Esse caso é análogo ao anterior, mas favorece a segunda espécie.",
          symbolic_equilibria[2]),
 
         ("4. Coexistência das Espécies", 
