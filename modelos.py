@@ -50,8 +50,14 @@ def geral_equation():
 
 
 def latex_equation(eq1, eq2):
-    eqlatex = sp.latex(sp.Eq(sp.Symbol(
-        r"\frac{dx}{dt}"), eq1)) + r", \quad " + sp.latex(sp.Eq(sp.Symbol(r"\frac{dy}{dt}"), eq2))
+    eqlatex = (
+        r"\begin{array}{l}"  # Ambiente array com alinhamento à esquerda
+        + sp.latex(sp.Eq(sp.Symbol(r"\dfrac{dx}{dt}"), eq1))  # Primeira equação
+        + r" \\"  # Quebra de linha
+        + r" \\"  # Quebra de linha
+        + sp.latex(sp.Eq(sp.Symbol(r"\dfrac{dy}{dt}"), eq2))  # Segunda equação
+        + r"\end{array}"  # Fim do ambiente array
+    )
     return eqlatex
 
 
@@ -183,7 +189,7 @@ def main():
                 J_eval = sp.simplify(
                     J.subs({x: eq[0], y: eq[1]})).subs(param_values)
                 conts1[1].write(
-                    f"**{i}. Matriz Jacobiana avaliada no ponto de equilíbrio $E_{i}$:**")
+                    f"**{i}. Matriz Jacobiana avaliada no ponto de equilíbrio $E_{i}=({eq[0]:.2f},{eq[1]:.2f})$:**")
                 conts1[1].latex(f"J(E_{i}) = {sp.latex(J_eval.evalf(3))}")
                 J_numpy = np.array(J_eval.tolist(), dtype=np.float64)
                 eigenvalues = la.eigvals(J_numpy)
@@ -219,6 +225,7 @@ def main():
 
             # Gerar lista de parâmetros
             param_list = list(param_symbols.values())
+            print(param_list)
 
             # Criar funções numéricas
             f_lambda = sp.lambdify((x, y, *param_list), eq1, modules="numpy")
@@ -237,7 +244,8 @@ def main():
                 ]
 
             # Resolver as equações diferenciais
-            sol = spi.solve_ivp(system, (t_span[0], t_span[-1]), y0, t_eval=t_span, args=(param_values,))
+            par_vals = {key:val for key, val in param_values.items() if key in param_symbols.values()}
+            sol = spi.solve_ivp(system, (t_span[0], t_span[-1]), y0, t_eval=t_span, args=(par_vals,))
 
             # Criar gráfico da solução com Plotly
             fig_solucao = go.Figure()
@@ -260,7 +268,7 @@ def main():
             x_vals = np.linspace(min(0, min(sol.y[0])), 1.2 * max(sol.y[0]), 20)
             y_vals = np.linspace(min(0, min(sol.y[1])), 1.2 * max(sol.y[1]), 20)
             X, Y = np.meshgrid(x_vals, y_vals)
-            U, V = system(0, [X, Y], param_values)
+            U, V = system(0, [X, Y], par_vals)
 
             # Criar campo vetorial usando Plotly
             fig_campo = go.Figure()
