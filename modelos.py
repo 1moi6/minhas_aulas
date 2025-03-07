@@ -3,7 +3,6 @@ import sympy as sp
 import numpy as np
 import scipy.linalg as la
 import scipy.integrate as spi
-# import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
 st.set_page_config(
@@ -62,10 +61,14 @@ def latex_equation(eq1, eq2):
 
 
 def evaluate_equilibria(symbolic_eq, param_values):
-    numerical_eq = [
-        tuple(float(eq.subs(param_values).evalf()) for eq in equilibrium)
-        for equilibrium in symbolic_eq
-    ]
+    try:
+        numerical_eq = [
+            tuple(float(eq.subs(param_values).evalf()) for eq in equilibrium)
+            for equilibrium in symbolic_eq
+        ]
+    except Exception as e:
+        print(e)
+        numerical_eq = []
     return numerical_eq
 
 
