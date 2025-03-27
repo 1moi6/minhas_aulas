@@ -28,8 +28,15 @@ stability_colors = {
     }
 
 
-def find_symbolic_equilibria(eq1, eq2, vars):
-    return sp.solve([eq1, eq2], vars)
+
+def find_symbolic_equilibria(eq1, eq2, vars, timeout=10):
+    """Resolve simbolicamente o sistema de equações com um tempo limite.
+    Retorna uma lista vazia [] se não encontrar soluções dentro do tempo especificado."""
+    try:
+        solutions = sp.solve([eq1, eq2], vars, dict=True, manual=True, doit=False)
+        return solutions if solutions else []
+    except Exception:
+        return []
 
 
 def jacobian_matrix(eq1, eq2, vars):
@@ -138,34 +145,35 @@ def main():
             conts[0].write("\nAs equações do sistema são:")
             conts[0].latex(latex_equation(eq1, eq2))
 
-            equilibria = find_symbolic_equilibria(eq1, eq2, (x, y))
-            J = jacobian_matrix(eq1, eq2, (x, y))
-            cols_pe = conts[1].columns([0.6,0.4])
-            cols_pe[0].write("#### Pontos de equilíbrio")
-            if cols_pe[1].toggle("Ver pontos de equilíbrio",value=True):
-                conts[1].write(
-                    "Os pontos de equilíbrio são os valores de $(x,y)$ onde as equações do sistema são zeradas.")
-
-                for i, eq in enumerate(equilibria, 1):
-                    conts[1].write(f"Ponto de equilíbrio {i}:")
-                    conts[1].latex(
-                        f"E_{i}=\\left({sp.latex(eq[0])}, {sp.latex(eq[1])}\\right)")
+            msg = st.toast('Iniciando cálculo dos pontos de equilíbrio')
+            equilibria = find_symbolic_equilibria(eq1, eq2, (x, y), timeout=10)
+            msg.toast('Pontos de equilíbrio encontrados')
             
-            cols_ja = conts[2].columns([0.7,0.3])
-            cols_ja[0].write("#### Matriz jacobiana do sistema")
-            if cols_ja[1].toggle("Ver jacobiana",value=True):
-                conts[2].write(
-                    "A matriz jacobiana é obtida a partir das derivadas parciais das equações do sistema.")
-                conts[2].latex(f"J(x,y) = {sp.latex(J)}")
-                conts[2].divider()
-                conts[2].write(
-                    "##### Matrizes jacobianas avaliadas nos pontos de equilíbrio")
+            if len(equilibria):
+                equilibria = [tuple(eq.values()) for eq in equilibria]
+                J = jacobian_matrix(eq1, eq2, (x, y))
+                with st.expander("#### Ver pontos de equilíbrio"):
+                    st.write(
+                        "Os pontos de equilíbrio são os valores de $(x,y)$ onde as equações do sistema são zeradas.")
 
-                for i, eq in enumerate(equilibria, 1):
-                    J_eval = sp.simplify(J.subs({x: eq[0], y: eq[1]}))
-                    conts[2].write(
-                        f"Matriz Jacobiana avaliada no ponto de equilíbrio {i}:")
-                    conts[2].latex(f"J(E_{i}) = {sp.latex(J_eval)}")
+                    for i, eq in enumerate(equilibria, 1):
+                        st.write(f"Ponto de equilíbrio {i}:")
+                        st.latex(
+                            f"E_{i}=\\left({sp.latex(eq[0])}, {sp.latex(eq[1])}\\right)")
+                
+                with st.expander("Ver jacobiana"):
+                    st.write(
+                        "A matriz jacobiana é obtida a partir das derivadas parciais das equações do sistema.")
+                    st.latex(f"J(x,y) = {sp.latex(J)}")
+                    st.divider()
+                    st.write(
+                        "##### Matrizes jacobianas avaliadas nos pontos de equilíbrio")
+
+                    for i, eq in enumerate(equilibria, 1):
+                        J_eval = sp.simplify(J.subs({x: eq[0], y: eq[1]}))
+                        st.write(
+                            f"Matriz Jacobiana avaliada no ponto de equilíbrio {i}:")
+                        st.latex(f"J(E_{i}) = {sp.latex(J_eval)}")
 
         except Exception as e:
             st.error(f"Erro ao processar as equações: {e}")
@@ -184,27 +192,31 @@ def main():
             )
 
         numerical_equilibria = evaluate_equilibria(equilibria, param_values)
+        print(numerical_equilibria)
         col1 = conts1[1].columns([0.8, 0.2])
         on = col1[1].toggle("Ver análise")
         col1[0].write("#### Avaliação dos equilíbrios")
         if on:
-            for i, eq in enumerate(numerical_equilibria, 1):
-                J_eval = sp.simplify(
-                    J.subs({x: eq[0], y: eq[1]})).subs(param_values)
-                conts1[1].write(
-                    f"**{i}. Matriz Jacobiana avaliada no ponto de equilíbrio $E_{i}=({eq[0]:.2f},{eq[1]:.2f})$:**")
-                conts1[1].latex(f"J(E_{i}) = {sp.latex(J_eval.evalf(3))}")
-                J_numpy = np.array(J_eval.tolist(), dtype=np.float64)
-                eigenvalues = la.eigvals(J_numpy)
-                tipo = estability_type(eigenvalues)
-                conts1[1].write(
-                    f"Os autovalores são: $\\lambda_{1} = {eigenvalues[0]:.3f}$ e $\\lambda_{2} = {eigenvalues[1]:.3f}$")
-                if "Atrator" in tipo:
-                    conts1[1].success(tipo)
-                elif "sela" in tipo:
-                    conts1[1].warning(tipo)
-                else:
-                    conts1[1].error(tipo)
+            try:
+                for i, eq in enumerate(numerical_equilibria, 1):
+                    J_eval = sp.simplify(
+                        J.subs({x: eq[0], y: eq[1]})).subs(param_values)
+                    conts1[1].write(
+                        f"**{i}. Matriz Jacobiana avaliada no ponto de equilíbrio $E_{i}=({eq[0]:.2f},{eq[1]:.2f})$:**")
+                    conts1[1].latex(f"J(E_{i}) = {sp.latex(J_eval.evalf(3))}")
+                    J_numpy = np.array(J_eval.tolist(), dtype=np.float64)
+                    eigenvalues = la.eigvals(J_numpy)
+                    tipo = estability_type(eigenvalues)
+                    conts1[1].write(
+                        f"Os autovalores são: $\\lambda_{1} = {eigenvalues[0]:.3f}$ e $\\lambda_{2} = {eigenvalues[1]:.3f}$")
+                    if "Atrator" in tipo:
+                        conts1[1].success(tipo)
+                    elif "sela" in tipo:
+                        conts1[1].warning(tipo)
+                    else:
+                        conts1[1].error(tipo)
+            except:
+                pass
 
         col2 = conts1[2].columns([0.8, 0.2])
         on2 = col2[1].toggle("Ver gráficos")
@@ -235,7 +247,7 @@ def main():
             g_lambda = sp.lambdify((x, y, *param_list), eq2, modules="numpy")
 
             # Configuração do solver
-            y0 = [x0, y0]  # Condições iniciais
+            cond_ini = [x0, y0]  # Condições iniciais
             t_span = np.linspace(0, tf, 500)  
 
             # Definir a função do sistema dinâmico
@@ -248,7 +260,8 @@ def main():
 
             # Resolver as equações diferenciais
             par_vals = {key:val for key, val in param_values.items() if key in param_symbols.values()}
-            sol = spi.solve_ivp(system, (t_span[0], t_span[-1]), y0, t_eval=t_span, args=(par_vals,))
+            print(par_vals,cond_ini)
+            sol = spi.solve_ivp(system, (t_span[0], t_span[-1]), cond_ini, t_eval=t_span, args=(par_vals,))
 
             # Criar gráfico da solução com Plotly
             fig_solucao = go.Figure()
@@ -273,52 +286,58 @@ def main():
             X, Y = np.meshgrid(x_vals, y_vals)
             U, V = system(0, [X, Y], par_vals)
 
-            # Criar campo vetorial usando Plotly
-            fig_campo = go.Figure()
+            try:
+                # Criar campo vetorial usando Plotly
+                fig_campo = go.Figure()
 
-            # Adicionar setas do campo vetorial
-            for i in range(len(X)):
-                for j in range(len(Y)):
-                    fig_campo.add_trace(go.Scatter(
-                        x=[X[i, j], X[i, j] + U[i, j] * 0.1],
-                        y=[Y[i, j], Y[i, j] + V[i, j] * 0.1],
-                        mode="lines",
-                        line=dict(color="gray", width=1),
-                        showlegend=False
-                    ))
+                # Adicionar setas do campo vetorial
+                for i in range(len(X)):
+                    for j in range(len(Y)):
+                        fig_campo.add_trace(go.Scatter(
+                            x=[X[i, j], X[i, j] + U[i, j] * 0.1],
+                            y=[Y[i, j], Y[i, j] + V[i, j] * 0.1],
+                            mode="lines",
+                            line=dict(color="gray", width=1),
+                            showlegend=False
+                        ))
 
-            # Adicionar trajetória da solução
-            fig_campo.add_trace(go.Scatter(
-                x=sol.y[0], y=sol.y[1], mode="lines", name="Trajetória", line=dict(color="blue"),showlegend=False
-            ))
-
-            # Adicionar pontos de equilíbrio
-            used_labels = set()
-            for i, eq in enumerate(numerical_equilibria, 1):
-                J_eval = sp.simplify(J.subs({x: eq[0], y: eq[1]})).subs(param_values)
-                J_numpy = np.array(J_eval.tolist(), dtype=np.float64)
-                eigenvalues = la.eigvals(J_numpy)
-                tipo = estability_type(eigenvalues)
-                show_legend = tipo not in used_labels  
-                used_labels.add(tipo) 
-                
+                # Adicionar trajetória da solução
                 fig_campo.add_trace(go.Scatter(
-                    x=[eq[0]], y=[eq[1]],
-                    mode="markers",
-                    marker=dict(size=10, color=stability_colors[tipo]),
-                    name=tipo if show_legend else "",
-                    showlegend=show_legend
+                    x=sol.y[0], y=sol.y[1], mode="lines", name="Trajetória", line=dict(color="blue"),showlegend=False
                 ))
 
-            # Configuração do layout do campo vetorial
-            fig_campo.update_layout(
-                title="Campo vetorial",
-                xaxis_title="x",  # Forçando LaTeX
-                yaxis_title="y", 
-                template="plotly_white"
-            )
+                # Adicionar pontos de equilíbrio
+                used_labels = set()
+            
+           
+                for i, eq in enumerate(numerical_equilibria, 1):
+                    J_eval = sp.simplify(J.subs({x: eq[0], y: eq[1]})).subs(param_values)
+                    J_numpy = np.array(J_eval.tolist(), dtype=np.float64)
+                    eigenvalues = la.eigvals(J_numpy)
+                    tipo = estability_type(eigenvalues)
+                    show_legend = tipo not in used_labels  
+                    used_labels.add(tipo) 
+                    
+                    fig_campo.add_trace(go.Scatter(
+                        x=[eq[0]], y=[eq[1]],
+                        mode="markers",
+                        marker=dict(size=10, color=stability_colors[tipo]),
+                        name=tipo if show_legend else "",
+                        showlegend=show_legend
+                    ))
+                
+                # Configuração do layout do campo vetorial
+                fig_campo.update_layout(
+                    title="Campo vetorial",
+                    xaxis_title="x",  # Forçando LaTeX
+                    yaxis_title="y", 
+                    template="plotly_white"
+                )
+                conts1[2].plotly_chart(fig_campo, use_container_width=True)
+            except:
+                pass
 
-            # Exibir campo vetorial interativo
-            conts1[2].plotly_chart(fig_campo, use_container_width=True)
+
+            # Exibir campo vetorial intera
 if __name__ == "__main__":
     main()
