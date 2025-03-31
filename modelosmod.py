@@ -10,9 +10,10 @@ import plotly.graph_objects as go
 
 
 st.set_page_config(
-    page_title="Análise qualitativa de EDOs",
+    page_title="Análise de modelos em EDO",
     page_icon="attractor_icon.png"  # Arquivo de ícone na pasta do projeto
 )
+# st.subheader("Simule. Visualize. Entenda.")
 
 if 'modelos' not in st.session_state:
     st.session_state.modelos = modelos
