@@ -31,6 +31,10 @@ sb_containers[0].selectbox('Selecione um modelo:',st.session_state.modelos,forma
 sb_containers[0].radio('Selecione uma opção:',['Descrição do modelo','Análise Algébrica','Análise Numérica','Inserir seu Modelo'],key='tipo_de_analise')
 
 if st.session_state.tipo_de_analise=="Descrição do modelo":
+    st.markdown(
+    "<h5 style='text-align: center;'>Informações sobre o modelo</h5>", 
+    unsafe_allow_html=True)
+
     mdl = list(st.session_state.modelo_selecionado.values())[0]
     st.write("#### Descrição do modelo") 
     st.write(mdl['model_description']) 
@@ -47,6 +51,9 @@ if st.session_state.tipo_de_analise=="Descrição do modelo":
     st.markdown(mdl['model_applications']) 
 
 if st.session_state.tipo_de_analise=="Análise Algébrica":
+    st.markdown(
+    "<h5 style='text-align: center;'>Análise algébrica do modelo</h5>", 
+    unsafe_allow_html=True)
     mdl = list(st.session_state.modelo_selecionado.values())[0]
     variables = sp.symbols(mdl['variables'])
     param_symbols = {param.strip(): sp.Symbol(param.strip()) for param in list(mdl['params'].keys())}
@@ -86,7 +93,7 @@ if st.session_state.tipo_de_analise=="Análise Algébrica":
 
 if st.session_state.tipo_de_analise=="Análise Numérica":
     st.markdown(
-    "<h6 style='text-align: center;'>Análise numérica da EDO</h6>", 
+    "<h5 style='text-align: center;'>Análise numérica do modelo</h5>", 
     unsafe_allow_html=True
 )
     mdl = list(st.session_state.modelo_selecionado.values())[0]
@@ -115,7 +122,7 @@ if st.session_state.tipo_de_analise=="Análise Numérica":
     for k,v in mdl['params'].items():
         param_values[k] = sb_containers[1].number_input(f"Valor de ${sp.latex(sp.Symbol(k))}$:",0.0,value=v)
 
-    with st.expander("Análise numérica dos equilíbrios"):
+    with st.expander("**Análise numérica dos equilíbrios**"):
         numerical_equilibria = evaluate_equilibria(equilibria, param_values,variables)
         J = jacobian_matrix(equations,variables)
         if len(numerical_equilibria):
@@ -141,7 +148,7 @@ if st.session_state.tipo_de_analise=="Análise Numérica":
                         st.error(tipo)
             except Exception as e:
                 st.error(f"Erro ao calcular a matriz jacobiana: {e}")
-    with st.expander("Gráfico da solução numérica"):
+    with st.expander("**Gráfico da solução numérica**"):
         numerical_function = sp.lambdify((*variables, *param_symbols.values()), equations, modules="numpy")
         def system(t, vars, param_values):
                 return numerical_function(*vars, *param_values.values())
@@ -150,23 +157,23 @@ if st.session_state.tipo_de_analise=="Análise Numérica":
         sol = spi.solve_ivp(system, (t_span[0], t_span[-1]), initial_condition, t_eval=t_span, args=(param_values,))
         #  Criar gráfico da solução com Plotly
         fig_solucao = go.Figure()
+        yaxis = []
         for idx,s in enumerate(sol.y):
             fig_solucao.add_trace(go.Scatter(x=sol.t, y=s, mode="lines", name=f"{variables[idx]}(t)"))
-        # fig_solucao.add_trace(go.Scatter(x=sol.t, y=sol.y[0], mode="lines", name="x(t)"))
-        # fig_solucao.add_trace(go.Scatter(x=sol.t, y=sol.y[1], mode="lines", name="y(t)"))
+            yaxis.append(f"{variables[idx]}(t)")
 
         # Configuração do layout
         fig_solucao.update_layout(
             title="Solução numérica do modelo",
-            xaxis_title="Tempo",
-            yaxis_title="População",
+            xaxis_title="t",
+            yaxis_title= ", ".join(yaxis), 
             xaxis=dict(range=[t_0, t_f]),  # Garantir que o eixo x começa em 0
             template="plotly_white"
         )
         st.plotly_chart(fig_solucao, use_container_width=True)
 
     if len(variables)==2:
-        with st.expander("Gráfico da plano de fase"):
+        with st.expander("**Gráfico da plano de fase e órbita**"):
             x_vals = np.linspace(min(0, min(sol.y[0])), 1.2 * max(sol.y[0]), 20)
             y_vals = np.linspace(min(0, min(sol.y[1])), 1.2 * max(sol.y[1]), 20)
             X, Y = np.meshgrid(x_vals, y_vals)
@@ -214,8 +221,10 @@ if st.session_state.tipo_de_analise=="Análise Numérica":
                 # Configuração do layout do campo vetorial
                 fig_campo.update_layout(
                     title="Campo vetorial e órbita do sistema",
-                    xaxis_title="x",  # Forçando LaTeX
-                    yaxis_title="y", 
+                    xaxis_title=f"{variables[0]}",  # Forçando LaTeX
+                    yaxis_title=f"{variables[1]}",
+                    xaxis=dict(range=[min(0, min(sol.y[0])), 1.2 * max(sol.y[0])]),
+                    yaxis=dict(range=[min(0, min(sol.y[1])), 1.2 * max(sol.y[1])]), 
                     template="plotly_white"
                 )
                 st.plotly_chart(fig_campo, use_container_width=True)
@@ -231,7 +240,7 @@ if st.session_state.tipo_de_analise=="Inserir seu Modelo":
     conts = [st.container(border=True), st.container(
                 border=True), st.container(border=True)]
 
-    conts[0].markdown("Informe as variáveis do seu modelo, separadas por vírgula:")
+    conts[0].markdown("**Informe as variáveis do seu modelo, separadas por vírgula.**")
     # variables = conts[0].text_input("Variáveis do modelo:", ", ".join(f"x_{i+1}" for i in range(3)), key="variables")
     variables = conts[0].text_input("Variáveis do modelo:", ", ".join(['S','I','R']), key="variables")
     variables = [v.strip() for v in variables.split(",")]
@@ -239,7 +248,7 @@ if st.session_state.tipo_de_analise=="Inserir seu Modelo":
     aux = ", ".join([sp.latex(symbol) for symbol in symbols])
     conts[0].markdown("As variáveis do modelo são: $" + aux+"$")
     conts[0].divider()
-    conts[0].markdown("Informe as equações dos seu modelo")
+    conts[0].markdown("**Informe as equações dos seu modelo.**")
     eq_strings_a = ["-alpha*S*I","alpha*S*I-beta*I","beta*I"]
     eq_strings = []
     for i,v in enumerate(variables):
@@ -248,34 +257,37 @@ if st.session_state.tipo_de_analise=="Inserir seu Modelo":
         eq_strings.append(eq_v)
 
     conts[0].divider()
-    conts[0].markdown("Informe os parâmetros do seu modelo, separados por vírgula:")
+    conts[0].markdown("**Informe os parâmetros do seu modelo, separados por vírgula.**")
     parameters = conts[0].text_input("Parâmetros do modelo:", "alpha, beta", key="parameters")
     parameters = [letras_gregas.get(v.strip(),v.strip()) for v in parameters.split(",")]
     param_symbols = sp.symbols(parameters)
     aux = ", ".join([sp.latex(symbol) for symbol in param_symbols])
-    conts[0].markdown("Os parâmetros do modelo são: $" + aux+"$")
-
-    with conts[0].expander("Ver equações do modelo"):
-        st.write("As equações do modelo são:")
-        st.latex(latex_equation(eq_strings,{k:v for k,v in zip(parameters,param_symbols)},variables))
+    
+    cols = conts[0].columns([0.75,0.25],vertical_alignment='center')
+    cols[0].markdown("Os parâmetros do modelo são: $" + aux+"$")
+    on = cols[1].toggle("ver equações?")
+    if on:
+        conts[0].write("As equações do modelo são:")
+        conts[0].latex(latex_equation(eq_strings,{k:v for k,v in zip(parameters,param_symbols)},variables))
     
     conts[0].divider()
-    conts[0].markdown("Informe o valor dos parâmetros do modelo:")
+    conts[0].markdown("**Informe o valor dos parâmetros do modelo.**")
     cols = conts[0].columns(5)
     param_values = {}
     for i, p in enumerate(parameters):
         aux  = cols[i%5].number_input(f"Valor de ${sp.latex(sp.Symbol(p))}$:",0.0,value=1.0,key=f"param_{p}")
         param_values[p] = aux
     
+    
+    conts[0].markdown("**Informe os valores iniciais das variáveis do modelo.**")
     cols = conts[0].columns(min(5,len(variables)))
-    conts[0].markdown("Informe os valores iniciais das variáveis do modelo:")
     inicial_condition = []
     for i, v in enumerate(variables):
         aux = cols[i%5].number_input(f"Valor inicial de ${sp.latex(sp.Symbol(v))}$:",0.0,value=1.0,key=f"var_{v}")
         inicial_condition.append(aux)
     
+    conts[0].markdown("**Informe o intervalo de tempo para a simulação.**")
     cols = conts[0].columns(2)
-    conts[0].markdown("Informe o intervalo de tempo para a simulação:")
     t_0 = cols[0].number_input("Tempo inicial:",0.0,value=0.0)
     t_f = cols[1].number_input("Tempo final:",0.0,value=10.0)
     
