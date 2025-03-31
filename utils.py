@@ -1,15 +1,43 @@
 import sympy as sp
 import numpy as np
 
+letras_gregas = {
+    "alfa": "alpha",
+    "beta": "beta",
+    "gama": "gamma",
+    "delta": "delta",
+    "épsilon": "epsilon",
+    "zeta": "zeta",
+    "eta": "eta",
+    "teta": "theta",
+    "iota": "iota",
+    "capa": "kappa",
+    "lambda": "lambda",
+    "mi": "mu",
+    "ni": "nu",
+    "xi": "xi",
+    "ômicron": "omicron",
+    "pi": "pi",
+    "ró": "rho",
+    "sigma": "sigma",
+    "tau": "tau",
+    "upsilon": "upsilon",
+    "fi": "phi",
+    "chi": "chi",
+    "psi": "psi",
+    "ômega": "omega"
+}
+
+
 
 modelos = [
     {"Lotka-Volterra": {
         "model_description": "O modelo de Lotka-Volterra descreve a dinâmica de populações em um sistema predador-presa. Ele consiste em um sistema de equações diferenciais ordinárias (EDOs) que expressam a interação entre as populações de presas e predadores ao longo do tempo.",
         
-        "params_interpretation":r""" - **$\alpha$**: Taxa de crescimento da população de presas na ausência de predadores.
-                                    - **$\beta$**: Taxa de predação, representando a eficiência da captura de presas pelos predadores.
-                                    - **$\gamma$**: Taxa de mortalidade dos predadores na ausência de presas.
-                                    - **$\delta$**: Taxa de conversão de presas consumidas em novos predadores.""",
+        "params_interpretation":r""" - **$\alpha$**: Taxa de crescimento da população de presas na ausência de predadores.\n
+- **$\beta$**: Taxa de predação, representando a eficiência da captura de presas pelos predadores.
+- **$\gamma$**: Taxa de mortalidade dos predadores na ausência de presas.
+- **$\delta$**: Taxa de conversão de presas consumidas em novos predadores.""",
 
         "model_behavior": "O modelo exibe oscilações periódicas na população de presas e predadores. Quando há muitas presas, a população de predadores cresce, reduzindo a população de presas. Com menos presas, os predadores diminuem, permitindo que as presas se recuperem e o ciclo recomece.",
 
@@ -17,39 +45,12 @@ modelos = [
         "equations": ["alpha * x - beta * x * y","delta * x * y - gamma * y"],
         "variables":['x','y'],
         "initial_condition":[10.0,20.0],
+        "time_span": [0, 100],
         "params": {
-            "alpha": 0.1,
-            "beta": 0.02,
-            "gamma": 0.3,
-            "delta": 0.01
-        }
-    }},
-    {"Logístico": {
-        "description": "Este modelo clássico descreve a interação entre presas e predadores em um ecossistema.",
-        "eq": ["r * x * (1 - x / K)"],
-        "params": {
-            "r": 0.1,
-            "K": 100
-        }
-    }},
-    {"Logístico com colheita": {
-        "description": "Extensão do modelo logístico considerando uma taxa de colheita constante.",
-        "eq1": "r * x * (1 - x / K) - h",
-        "dimensao": 1,
-        "params": {
-            "r": 0.9,
-            "K": 7.0,
-            "h": 0.5
-        }
-    }},
-    {"Modelo SI": {
-        "description": "Modelo compartimental que descreve a propagação de doenças infecciosas.",
-        "eq1": "-beta * x * y",
-        "eq2": "beta * x * y - gamma * y",
-        "dimensao":2,
-        "params": {
-            "beta": 0.3,
-            "gamma": 0.1
+            "alpha": 0.25,
+            "beta": 0.05,
+            "gamma": 0.6,
+            "delta": 0.03
         }
     }}
 ]
@@ -92,7 +93,7 @@ def geral_equation():
     return eqlatex
 
 
-def latex_equation(equations, param_symbols):
+def latex_equation(equations, param_symbols,vars=None):
     """
     Converte uma lista de equações em formato LaTeX.
     
@@ -103,30 +104,52 @@ def latex_equation(equations, param_symbols):
     Retorna:
         str: String formatada em LaTeX com as equações organizadas no ambiente array.
     """
+    all_symbols = {}
+    all_symbols.update(param_symbols)  # Add parameters
+    
+    # Add variables to the symbol mapping
+    if vars:
+        for var in vars:
+            all_symbols[var] = sp.Symbol(var)
     # Converter strings em expressões simbólicas de SymPy
-    equations = [sp.sympify(eq, locals=param_symbols) for eq in equations]
+    equations = [sp.sympify(eq, locals=all_symbols) for eq in equations]
     
     # Criar a estrutura LaTeX para exibir as equações como um sistema
-    eqlatex = r"\begin{array}{l}"  # Ambiente array para alinhar as equações à esquerda
+      # Ambiente array para alinhar as equações à esquerda
     
     # Iterar sobre as equações e numerá-las como dx/dt, dy/dt, dz/dt, etc.
-    for i, eq in enumerate(equations):
-        var_symbol = sp.Symbol(fr"\dfrac{{d x_{i+1}}}{{dt}}")  # Criando dxi/dt dinamicamente
-        eqlatex += sp.latex(sp.Eq(var_symbol, eq)) + r" \\" + "\n"  # Adicionando a equação com quebra de linha
+    if len(equations)>1:
+        eqlatex = r"\begin{array}{l}"
+        for i, eq in enumerate(equations):
+            var_symbol = sp.Symbol(fr"\dfrac{{d{vars[i]}}}{{dt}}")  # Criando dxi/dt dinamicamente
+            eqlatex += sp.latex(sp.Eq(var_symbol, eq)) + r" \\ \\" + "\n"  # Adicionando a equação com quebra de linha
+        eqlatex += r"\end{array}"  # Fim do ambiente array
 
-    eqlatex += r"\end{array}"  # Fim do ambiente array
+    # elif len(equations)==2:
+    #     eqlatex = (
+    #     r"\begin{array}{l}"  # Ambiente array com alinhamento à esquerda
+    #     + sp.latex(sp.Eq(sp.Symbol(r"\dfrac{dx}{dt}"), equations[0]))  # Primeira equação
+    #     + r" \\"  # Quebra de linha
+    #     + r" \\"  # Quebra de linha
+    #     + sp.latex(sp.Eq(sp.Symbol(r"\dfrac{dy}{dt}"), equations[1]))  # Segunda equação
+    #     + r"\end{array}"  # Fim do ambiente array
+    # )
+    
     return eqlatex
 
 
-def evaluate_equilibria(symbolic_eq, param_values):
-    try:
-        numerical_eq = [
-            tuple(float(eq.subs(param_values).evalf()) for eq in equilibrium)
-            for equilibrium in symbolic_eq
-        ]
-    except Exception as e:
-        print(e)
-        numerical_eq = []
+def evaluate_equilibria(symbolic_eq, param_values,vars):
+    aux_ne = [tuple([eq.get(var,0) for var in vars]) for eq in symbolic_eq]
+    numerical_eq = []
+    for equilibrium in aux_ne:
+        aux = []
+        for eq in equilibrium:
+            try:
+                aux.append(float(eq.subs(param_values).evalf()))
+            except Exception as e:
+                aux.append(float(eq))
+                print(f"Erro ao avaliar a equação: {eq}")
+        numerical_eq.append(aux)
     return numerical_eq
 
 
